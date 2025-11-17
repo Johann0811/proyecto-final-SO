@@ -63,18 +63,18 @@ Vagrant.configure("2") do |config|
       apt-get update -y
       apt-get install -y software-properties-common sshpass
       
-      echo "📦 Instalando Ansible..."
+      echo "Instalando Ansible..."
       apt-add-repository --yes --update ppa:ansible/ansible
       apt-get update -y
       apt-get install -y ansible
       
-      echo "🔑 Configurando SSH keys..."
+      echo "Configurando SSH keys..."
       if [ ! -f /home/vagrant/.ssh/id_rsa ]; then
         sudo -u vagrant ssh-keygen -t rsa -N "" -f /home/vagrant/.ssh/id_rsa
       fi
       chown -R vagrant:vagrant /home/vagrant/.ssh
       
-      echo "📝 Creando inventario de Ansible..."
+      echo "Creando inventario de Ansible..."
       mkdir -p /home/vagrant/ansible
       cat > /home/vagrant/ansible/inventory.ini <<'EOF'
 [webserver]
