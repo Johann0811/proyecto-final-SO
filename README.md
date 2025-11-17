@@ -1,1 +1,1 @@
-# proyecto-final-sistemasOperativos
+# proyecto-final-SO
