@@ -1,0 +1,43 @@
+---
+- name: Ajustar configuración de Monitoreo
+  hosts: monitoreo
+  become: yes
+  
+  tasks:
+    - name: Verificar que Prometheus está instalado
+      stat:
+        path: /usr/local/bin/prometheus
+      register: prometheus_check
+      failed_when: not prometheus_check.stat.exists
+      
+    - name: Verificar que Grafana está instalado
+      stat:
+        path: /usr/sbin/grafana-server
+      register: grafana_check
+      failed_when: not grafana_check.stat.exists
+      
+    - name: Verificar estado de Prometheus
+      systemd:
+        name: prometheus
+        state: started
+        enabled: yes
+        
+    - name: Verificar estado de Grafana
+      systemd:
+        name: grafana-server
+        state: started
+        enabled: yes
+        
+    - name: Esperar a que Prometheus esté disponible
+      uri:
+        url: http://localhost:9090/-/healthy
+        status_code: 200
+      retries: 10
+      delay: 3
+      
+    - name: Esperar a que Grafana esté disponible
+      uri:
+        url: http://localhost:3000/api/health
+        status_code: 200
+      retries: 10
+      delay: 3

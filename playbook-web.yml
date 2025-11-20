@@ -1,0 +1,150 @@
+---
+- name: Configurar Servidor Web con Nginx y Node Exporter
+  hosts: web
+  become: yes
+  vars:
+    node_exporter_version: "1.7.0"
+    
+  tasks:
+    - name: Actualizar cache de apt
+      apt:
+        update_cache: yes
+        cache_valid_time: 3600
+      
+    - name: Instalar paquetes necesarios
+      apt:
+        name:
+          - nginx
+          - wget
+          - curl
+          - net-tools
+        state: present
+        
+    - name: Crear página HTML
+      copy:
+        dest: /var/www/html/index.html
+        content: |
+          <!DOCTYPE html>
+          <html lang="es">
+          <head>
+              <meta charset="UTF-8">
+              <title>DataExplorer - Servidor Web</title>
+          </head>
+          <body>
+              <h1>Proyecto DataExplorer</h1>
+              <p>Servidor Web - Sistema de Monitoreo Distribuido</p>
+              
+              <h2>Informacion del Servidor</h2>
+              <ul>
+                  <li>Hostname: web</li>
+                  <li>IP: 192.168.56.22</li>
+                  <li>Servidor Web: Nginx</li>
+                  <li>Puerto: 80</li>
+              </ul>
+              
+              <h2>Metricas del Sistema</h2>
+              <ul>
+                  <li>Node Exporter: Puerto 9100</li>
+                  <li>Prometheus: <a href="http://192.168.56.23:9090">http://192.168.56.23:9090</a></li>
+                  <li>Grafana: <a href="http://192.168.56.23:3000">http://192.168.56.23:3000</a></li>
+              </ul>
+          </body>
+          </html>
+        mode: '0644'
+      notify: Restart Nginx
+        
+    - name: Habilitar e iniciar Nginx
+      systemd:
+        name: nginx
+        enabled: yes
+        state: started
+        
+    - name: Verificar que Nginx responde
+      uri:
+        url: http://localhost
+        status_code: 200
+      retries: 3
+      delay: 2
+        
+    - name: Crear usuario para Node Exporter
+      user:
+        name: node_exporter
+        system: yes
+        shell: /usr/sbin/nologin
+        create_home: no
+        
+    - name: Descargar Node Exporter
+      get_url:
+        url: "https://github.com/prometheus/node_exporter/releases/download/v{{ node_exporter_version }}/node_exporter-{{ node_exporter_version }}.linux-amd64.tar.gz"
+        dest: "/tmp/node_exporter.tar.gz"
+        mode: '0644'
+        
+    - name: Extraer Node Exporter
+      unarchive:
+        src: "/tmp/node_exporter.tar.gz"
+        dest: "/tmp/"
+        remote_src: yes
+        
+    - name: Copiar binario de Node Exporter
+      copy:
+        src: "/tmp/node_exporter-{{ node_exporter_version }}.linux-amd64/node_exporter"
+        dest: "/usr/local/bin/node_exporter"
+        mode: '0755'
+        remote_src: yes
+        
+    - name: Crear servicio systemd para Node Exporter
+      copy:
+        dest: /etc/systemd/system/node_exporter.service
+        content: |
+          [Unit]
+          Description=Node Exporter
+          Wants=network-online.target
+          After=network-online.target
+
+          [Service]
+          User=node_exporter
+          Group=node_exporter
+          Type=simple
+          Restart=on-failure
+          ExecStart=/usr/local/bin/node_exporter
+
+          [Install]
+          WantedBy=multi-user.target
+        mode: '0644'
+      notify: Restart Node Exporter
+        
+    - name: Recargar systemd
+      systemd:
+        daemon_reload: yes
+        
+    - name: Habilitar e iniciar Node Exporter
+      systemd:
+        name: node_exporter
+        enabled: yes
+        state: started
+        
+    - name: Verificar que Node Exporter responde
+      uri:
+        url: http://localhost:9100/metrics
+        status_code: 200
+      retries: 3
+      delay: 2
+        
+    - name: Limpiar archivos temporales
+      file:
+        path: "{{ item }}"
+        state: absent
+      loop:
+        - "/tmp/node_exporter.tar.gz"
+        - "/tmp/node_exporter-{{ node_exporter_version }}.linux-amd64"
+  
+  handlers:
+    - name: Restart Nginx
+      systemd:
+        name: nginx
+        state: restarted
+        
+    - name: Restart Node Exporter
+      systemd:
+        name: node_exporter
+        state: restarted
