@@ -1,4 +1,6 @@
-# proyecto-final-SO
+# proyecto-final-SO/ VIDEO DE LA SUSTENTACIÓN
+
+https://youtu.be/BNDbqkF873o
 
 Nombre y codigo estudiantil integrantes
 
