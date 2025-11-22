@@ -20,7 +20,7 @@
           - net-tools
         state: present
         
-    - name: Crear página HTML
+    - name: Crear pagina HTML
       copy:
         dest: /var/www/html/index.html
         content: |
